@@ -109,6 +109,9 @@ sub check_credentials {
         }
 
     } else {
+        # FreeBSD change:
+        # Committers will use their LDAP credentials
+        #
         $params->{bz_username} = $username . '@freebsd.org';
     }
 
