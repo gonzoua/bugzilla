@@ -122,6 +122,14 @@ sub requestChangePassword {
     my $login_name = $cgi->param('loginname')
       or ThrowUserError("login_needed_for_password_change");
 
+    # FreeBSD change:
+    # Committers have to change their password on the LDAP system,
+    # not within bugzilla
+    #
+    if ($login_name =~ /[@.]FreeBSD\.org$/i) {
+        ThrowUserError("password_change_requests_not_allowed");
+    }
+
     check_email_syntax($login_name);
     my $user = Bugzilla::User->check($login_name);
 
