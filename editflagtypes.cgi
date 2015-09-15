@@ -1,4 +1,4 @@
-#!/usr/bin/perl -wT
+#!/usr/bin/perl -T
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -6,15 +6,12 @@
 # This Source Code Form is "Incompatible With Secondary Licenses", as
 # defined by the Mozilla Public License, v. 2.0.
 
-################################################################################
-# Script Initialization
-################################################################################
-
-# Make it harder for us to do dangerous things in Perl.
+use 5.10.1;
 use strict;
+use warnings;
+
 use lib qw(. lib);
 
-# Use Bugzilla's flag modules for handling flag types.
 use Bugzilla;
 use Bugzilla::Constants;
 use Bugzilla::Flag;
@@ -44,23 +41,24 @@ my @products = @{$vars->{products}};
 
 my $action = $cgi->param('action') || 'list';
 my $token  = $cgi->param('token');
-my $product = $cgi->param('product');
-my $component = $cgi->param('component');
+my $prod_name = $cgi->param('product');
+my $comp_name = $cgi->param('component');
 my $flag_id = $cgi->param('id');
 
-if ($product) {
+my ($product, $component);
+
+if ($prod_name) {
     # Make sure the user is allowed to view this product name.
     # Users with global editcomponents privs can see all product names.
-    ($product) = grep { lc($_->name) eq lc($product) } @products;
-    $product || ThrowUserError('product_access_denied', { name => $cgi->param('product') });
+    ($product) = grep { lc($_->name) eq lc($prod_name) } @products;
+    $product || ThrowUserError('product_access_denied', { name => $prod_name });
 }
 
-if ($component) {
-    ($product && $product->id)
-      || ThrowUserError('flag_type_component_without_product');
-    ($component) = grep { lc($_->name) eq lc($component) } @{$product->components};
+if ($comp_name) {
+    $product || ThrowUserError('flag_type_component_without_product');
+    ($component) = grep { lc($_->name) eq lc($comp_name) } @{$product->components};
     $component || ThrowUserError('product_unknown_component', { product => $product->name,
-                                                                comp => $cgi->param('component') });
+                                                                comp => $comp_name });
 }
 
 # If 'categoryAction' is set, it has priority over 'action'.
@@ -72,7 +70,7 @@ if (my ($category_action) = grep { $_ =~ /^categoryAction-(?:\w+)$/ } $cgi->para
     my @categories;
     if ($category_action =~ /^(in|ex)clude$/) {
         if (!$user->in_group('editcomponents') && !$product) {
-            # The user can only add the flag type to products he can administrate.
+            # The user can only add the flag type to products they can administrate.
             foreach my $prod (@products) {
                 push(@categories, $prod->id . ':0')
             }

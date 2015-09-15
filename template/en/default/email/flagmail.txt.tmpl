@@ -27,6 +27,9 @@
 [% ELSE %]
   [% IF old_flag && old_flag.status == '?' %]
     [% to_identity = old_flag.setter.identity _ "'s request for" %]
+    [% IF old_flag.requestee.defined %]
+        [% requestee_identity = old_flag.requestee.identity _ "'s" %]
+    [% END %]
   [% END %]
   [% subject_status = statuses.$action %]
 [% END %]
@@ -37,16 +40,17 @@ Subject: [% flagtype_name %] [%+ subject_status %]: [[% terms.Bug %] [%+ bug.bug
   [Attachment [% attachment.id %]] [% attachment.description FILTER clean_text %][% END %]
 Date: [% date %]
 X-Bugzilla-Type: request
+[%+ INCLUDE "email/header-common.txt.tmpl" %]
 [%+ threadingmarker %]
 
 [%+ USE wrap -%]
 [%- FILTER bullet = wrap(80) -%]
 
 [% IF on_behalf_of %]
-[% user.identity %] has reassigned [% flag.setter.identity %]'s request for [% flagtype_name %]
+[% user.identity %] has reassigned [% flag.setter.identity %]'s request for [% IF requestee_identity %] [%+ requestee_identity %] [% END %] [% flagtype_name %]
 [% to_identity %]:
 [% ELSE %]
-[% user.identity %] has [% statuses.$action %] [%+ to_identity %] [%+ flagtype_name %]:
+[% user.identity %] has [% statuses.$action %] [%+ to_identity %] [% IF requestee_identity %] [%+ requestee_identity %] [% END %] [%+ flagtype_name %]:
 [% END %]
 
 [% terms.Bug %] [%+ bugidsummary %]
@@ -64,11 +68,14 @@ Attachment [% attidsummary %]
 
 [%- FILTER bullet = wrap(80) %]
 
-[% USE Bugzilla %]
-[%-# .defined is necessary to avoid a taint issue in Perl < 5.10.1, see bug 509794. %]
-[% IF Bugzilla.cgi.param("comment").defined && Bugzilla.cgi.param("comment").length > 0 %]
-------- Additional Comments from [% user.identity %]
-[%+ Bugzilla.cgi.param("comment") FILTER strip_control_chars %]
+[% FOREACH comment = new_comments %]
+
+[%- IF comment.count %]
+--- Comment #[% comment.count %] from [% comment.author.identity %] ---
+[% ELSE %]
+--- Description ---
+[% END %]
+[%+ comment.body_full({ is_bugmail => 1, wrap => 1 }) FILTER strip_control_chars %]
 [% END %]
 
 [%- END %]
