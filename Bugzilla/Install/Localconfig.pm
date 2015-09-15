@@ -15,7 +15,9 @@ package Bugzilla::Install::Localconfig;
 # * Files do not have the correct permissions
 # * The database is not up to date
 
+use 5.10.1;
 use strict;
+use warnings;
 
 use Bugzilla::Constants;
 use Bugzilla::Install::Util qw(bin_loc install_string);
@@ -26,7 +28,7 @@ use File::Basename qw(dirname);
 use Safe;
 use Term::ANSIColor;
 
-use base qw(Exporter);
+use parent qw(Exporter);
 
 our @EXPORT_OK = qw(
     read_localconfig
@@ -79,12 +81,24 @@ use constant LOCALCONFIG_VARS => (
         default => 1,
     },
     {
-        name    => 'index_html',
-        default => 0,
+        name    => 'db_mysql_ssl_ca_file',
+        default => '',
     },
     {
-        name    => 'cvsbin',
-        default => sub { bin_loc('cvs') },
+        name    => 'db_mysql_ssl_ca_path',
+        default => '',
+    },
+    {
+        name    => 'db_mysql_ssl_client_cert',
+        default => '',
+    },
+    {
+        name    => 'db_mysql_ssl_client_key',
+        default => '',
+    },
+    {
+        name    => 'index_html',
+        default => 0,
     },
     {
         name    => 'interdiffbin',
@@ -205,14 +219,20 @@ sub update_localconfig {
         # a 256-character string for site_wide_secret.
         $value = undef if ($name eq 'site_wide_secret' and defined $value
                            and length($value) == 256);
-        
+
         if (!defined $value) {
-            push(@new_vars, $name);
             $var->{default} = &{$var->{default}} if ref($var->{default}) eq 'CODE';
             if (exists $answer->{$name}) {
                 $localconfig->{$name} = $answer->{$name};
             }
             else {
+                # If the user did not supply an answers file, then they get
+                # notified about every variable that gets added. If there was
+                # an answer file, then we don't notify about site_wide_secret
+                # because we assume the intent was to auto-generate it anyway.
+                if (!scalar(keys %$answer) || $name ne 'site_wide_secret') {
+                    push(@new_vars, $name);
+                }
                 $localconfig->{$name} = $var->{default};
             }
         }

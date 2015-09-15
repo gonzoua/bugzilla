@@ -6,8 +6,12 @@
 # defined by the Mozilla Public License, v. 2.0.
 
 package Bugzilla::Auth::Login::CGI;
+
+use 5.10.1;
 use strict;
-use base qw(Bugzilla::Auth::Login);
+use warnings;
+
+use parent qw(Bugzilla::Auth::Login);
 use constant user_can_create_account => 1;
 
 use Bugzilla::Constants;
@@ -55,7 +59,7 @@ sub get_login_info {
         ThrowUserError('auth_untrusted_request', { login => $login });
     }
 
-    if (!$login || !$password || !$valid) {
+    if (!defined($login) || !defined($password) || !$valid) {
         return { failure => AUTH_NODATA };
     }
 

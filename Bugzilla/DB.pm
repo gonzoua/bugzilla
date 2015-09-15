@@ -7,20 +7,24 @@
 
 package Bugzilla::DB;
 
+use 5.10.1;
 use strict;
+use warnings;
 
 use DBI;
 
 # Inherit the DB class from DBI::db.
-use base qw(DBI::db);
+use parent -norequire, qw(DBI::db);
 
 use Bugzilla::Constants;
+use Bugzilla::Mailer;
 use Bugzilla::Install::Requirements;
-use Bugzilla::Install::Util qw(vers_cmp install_string);
+use Bugzilla::Install::Util qw(install_string);
 use Bugzilla::Install::Localconfig;
 use Bugzilla::Util;
 use Bugzilla::Error;
 use Bugzilla::DB::Schema;
+use Bugzilla::Version;
 
 use List::Util qw(max);
 use Storable qw(dclone);
@@ -577,8 +581,11 @@ sub bz_add_column {
     my $current_def = $self->bz_column_info($table, $name);
 
     if (!$current_def) {
+        # REFERENCES need to happen later and not be created right away
+        my $trimmed_def = dclone($new_def);
+        delete $trimmed_def->{REFERENCES};
         my @statements = $self->_bz_real_schema->get_add_column_ddl(
-            $table, $name, $new_def, 
+            $table, $name, $trimmed_def,
             defined $init_value ? $self->quote($init_value) : undef);
         print get_text('install_column_add',
                        { column => $name, table => $table }) . "\n"
@@ -592,14 +599,14 @@ sub bz_add_column {
         # column exists there and has a REFERENCES item.
         # bz_setup_foreign_keys will then add this FK at the end of
         # Install::DB.
-        my $col_abstract = 
+        my $col_abstract =
             $self->_bz_schema->get_column_abstract($table, $name);
         if (exists $col_abstract->{REFERENCES}) {
             my $new_fk = dclone($col_abstract->{REFERENCES});
             $new_fk->{created} = 0;
             $new_def->{REFERENCES} = $new_fk;
         }
-        
+
         $self->_bz_real_schema->set_column($table, $name, $new_def);
         $self->_bz_store_real_schema;
     }
@@ -1207,12 +1214,13 @@ sub bz_start_transaction {
 
 sub bz_commit_transaction {
     my ($self) = @_;
-    
+
     if ($self->{private_bz_transaction_count} > 1) {
         $self->{private_bz_transaction_count}--;
     } elsif ($self->bz_in_transaction) {
         $self->commit();
         $self->{private_bz_transaction_count} = 0;
+        Bugzilla::Mailer->send_staged_mail();
     } else {
        ThrowCodeError('not_in_transaction');
     }
@@ -1248,11 +1256,9 @@ sub db_new {
                        ShowErrorStatement => 1,
                        HandleError => \&_handle_error,
                        TaintIn => 1,
-                       FetchHashKeyName => 'NAME',  
-                       # Note: NAME_lc causes crash on ActiveState Perl
-                       # 5.8.4 (see Bug 253696)
-                       # XXX - This will likely cause problems in DB
-                       # back ends that twiddle column case (Oracle?)
+                       # See https://rt.perl.org/rt3/Public/Bug/Display.html?id=30933
+                       # for the reason to use NAME instead of NAME_lc (bug 253696).
+                       FetchHashKeyName => 'NAME',
                      };
 
     if ($override_attrs) {
@@ -1362,14 +1368,19 @@ sub _bz_real_schema {
     my ($self) = @_;
     return $self->{private_real_schema} if exists $self->{private_real_schema};
 
-    my ($data, $version) = $self->selectrow_array(
-        "SELECT schema_data, version FROM bz_schema");
+    my $bz_schema;
+    unless ($bz_schema = Bugzilla->memcached->get({ key => 'bz_schema' })) {
+        $bz_schema = $self->selectrow_arrayref(
+            "SELECT schema_data, version FROM bz_schema"
+        );
+        Bugzilla->memcached->set({ key => 'bz_schema', value => $bz_schema });
+    }
 
     (die "_bz_real_schema tried to read the bz_schema table but it's empty!")
-        if !$data;
+        if !$bz_schema;
 
-    $self->{private_real_schema} = 
-        $self->_bz_schema->deserialize_abstract($data, $version);
+    $self->{private_real_schema} =
+        $self->_bz_schema->deserialize_abstract($bz_schema->[0], $bz_schema->[1]);
 
     return $self->{private_real_schema};
 }
@@ -1411,6 +1422,8 @@ sub _bz_store_real_schema {
     $sth->bind_param(1, $store_me, $self->BLOB_TYPE);
     $sth->bind_param(2, $schema_version);
     $sth->execute();
+
+    Bugzilla->memcached->clear({ key => 'bz_schema' });
 }
 
 # For bz_populate_enum_tables
@@ -1497,7 +1510,7 @@ __END__
 
 =head1 NAME
 
-Bugzilla::DB - Database access routines, using L<DBI>
+Bugzilla::DB - Database access routines, using L<DBI|https://metacpan.org/pod/DBI>
 
 =head1 SYNOPSIS
 
@@ -1758,7 +1771,7 @@ The constructor should create a DSN from the parameters provided and
 then call C<db_new()> method of its super class to create a new
 class instance. See L<db_new> description in this module. As per
 DBI documentation, all class variables must be prefixed with
-"private_". See L<DBI>.
+"private_". See L<DBI|https://metacpan.org/pod/DBI>.
 
 =back
 
@@ -2229,7 +2242,8 @@ These methods return information about data in the database.
 Returns the last serial number, usually from a previous INSERT.
 
 Must be executed directly following the relevant INSERT.
-This base implementation uses L<DBI/last_insert_id>. If the
+This base implementation uses DBI's
+L<last_insert_id|https://metacpan.org/pod/DBI#last_insert_id>. If the
 DBD supports it, it is the preffered way to obtain the last
 serial index. If it is not supported, the DB-specific code
 needs to override this function.
@@ -2679,6 +2693,66 @@ our check for implementation of C<new> by derived class useless.
 
 =head1 SEE ALSO
 
-L<DBI>
+L<DBI|https://metacpan.org/pod/DBI>
 
 L<Bugzilla::Constants/DB_MODULE>
+
+=head1 B<Methods in need of POD>
+
+=over
+
+=item bz_add_fks
+
+=item bz_add_fk
+
+=item bz_drop_index_raw
+
+=item bz_table_info
+
+=item bz_add_index_raw
+
+=item bz_get_related_fks
+
+=item quote
+
+=item bz_drop_fk
+
+=item bz_drop_field_tables
+
+=item bz_drop_related_fks
+
+=item bz_table_columns
+
+=item bz_drop_foreign_keys
+
+=item bz_alter_column_raw
+
+=item bz_table_list_real
+
+=item bz_fk_info
+
+=item bz_setup_database
+
+=item bz_setup_foreign_keys
+
+=item bz_table_indexes
+
+=item bz_check_regexp
+
+=item bz_enum_initial_values
+
+=item bz_alter_fk
+
+=item bz_set_next_serial_value
+
+=item bz_table_list
+
+=item bz_table_columns_real
+
+=item bz_check_server_version
+
+=item bz_server_version
+
+=item bz_add_field_tables
+
+=back
