@@ -99,4 +99,37 @@ sub bug_end_of_create {
     Bugzilla->set_user($curuser);
 }
 
+# Auto-correct mimetypes for better usability
+# users prefer to view plain version of file in the browser
+# not download it
+sub _adjust_mime_type {
+    my $attachment = shift;
+
+    if (defined Bugzilla->input_params->{contenttypemethod}
+        && Bugzilla->input_params->{contenttypemethod} eq 'autodetect') {
+        my $mimetype = $attachment->{mimetype};
+        if (($mimetype eq 'application/shar')
+            || ($mimetype eq 'application/x-shar')) {
+            $attachment->{mimetype} = 'text/plain';
+        }
+        elsif (($mimetype eq 'text/x-patch')
+            || ($mimetype eq 'text/x-diff')) {
+            $attachment->{mimetype} = 'text/plain';
+            $attachment->{ispatch} = 1;
+        }
+        elsif ($mimetype =~ m#text/.*#) {
+            $attachment->{mimetype} = 'text/plain';
+        }
+    }
+}
+
+sub object_end_of_create {
+    my ($self, $args) = @_;
+    my $class = $args->{'class'};
+    my $object = $args->{'object'};
+    if ($class->isa('Bugzilla::Attachment')) {
+        _adjust_mime_type($object);
+    }
+}
+
 __PACKAGE__->NAME;
