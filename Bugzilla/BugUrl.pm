@@ -63,7 +63,6 @@ use constant SUB_CLASSES => qw(
     Bugzilla::BugUrl::MantisBT
     Bugzilla::BugUrl::SourceForge
     Bugzilla::BugUrl::GitHub
-    Bugzilla::BugUrl::Phabricator
 );
 
 ###############################
