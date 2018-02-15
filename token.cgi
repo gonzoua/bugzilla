@@ -130,7 +130,7 @@ sub requestChangePassword {
     # not within bugzilla
     #
     if ($login_name =~ /[@.]FreeBSD\.org$/i) {
-        ThrowUserError("password_change_requests_not_allowed");
+        ThrowUserError("password_change_requests_use_kpasswd");
     }
 
     check_email_syntax($login_name);
