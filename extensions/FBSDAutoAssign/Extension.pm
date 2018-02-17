@@ -220,7 +220,7 @@ sub _get_maintainer {
     my $port = shift();
     # Make sure category is lower case
     # port name can be mixed case
-    $port =~ s@(.*)/@\L\1/@;
+    $port =~ s@(.*)/@\L$1/@;
     my $portdir = "" . PORTSDIR . "/$port";
     # Does it exist and is a directory?
     if (-d $portdir) {
