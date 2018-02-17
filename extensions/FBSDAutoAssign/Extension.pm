@@ -71,7 +71,7 @@ sub bug_end_of_create {
 
     # Is it a port patch in summary matching
     #  (/usr/ports/)?([A-Za-z0-9_-]/[A-Za-z0-9_-])?
-    my @res = ($bug->short_desc =~ /(?:^|[:\[\s+])(?:\/usr\/ports\/)?([\w\-]+\/[\w\-\.]+)(?:[:\]\s+]|$)/g);
+    my @res = ($bug->short_desc =~ /(?:^|[:,\[\s+])(?:\/usr\/ports\/)?([\w\-]+\/[\w\-\.]+)(?:[:,\]\s+]|$)/g);
     if (@res && scalar(@res) > 0) {
         # warn("Found ports in summary: @res");
         push(@foundports, @res);
