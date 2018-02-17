@@ -218,6 +218,9 @@ sub _update_bug {
 sub _get_maintainer {
     # we expect _get_maintainer("category/port")
     my $port = shift();
+    # Make sure category is lower case
+    # port name can be mixed case
+    $port =~ s@(.*)/@\L\1/@;
     my $portdir = "" . PORTSDIR . "/$port";
     # Does it exist and is a directory?
     if (-d $portdir) {
