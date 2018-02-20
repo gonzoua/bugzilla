@@ -118,6 +118,7 @@ sub check_credentials {
 
     $params->{realname}  ||= $user_entry->get_value("displayName");
     $params->{realname}  ||= $user_entry->get_value("cn");
+    utf8::decode($params->{realname});
 
     $params->{extern_id} = $username;
 
