@@ -57,7 +57,7 @@ FROM
   JOIN flagtypes ON (flags.type_id = flagtypes.id)
   JOIN profiles p ON (p.userid = bugs.assigned_to AND p.is_enabled = 1)
 WHERE
-  flagtypes.name IN (?, ?, ?, ?)
+  flagtypes.name IN (?, ?, ?, ?, ?)
   AND } . $dnow . " - " . $dbh->sql_to_days("bugs.delta_ts") . " >= " . WAIT .
 " ORDER BY bugs.assigned_to, bugs.bug_status, bugs.bug_id;";
 
@@ -67,7 +67,8 @@ my $openbugs = $dbh->selectall_arrayref(
     'merge-quarterly',
     'mfc-stable8',
     'mfc-stable9',
-    'mfc-stable10');
+    'mfc-stable10',
+    'mfc-stable11');
 
 my $kwdquery = q{
 SELECT DISTINCT
