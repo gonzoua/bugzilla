@@ -211,6 +211,8 @@ sub _update_bug {
         }
     }
 
+    $bug->update();
+
     # Switch the user session back.
     Bugzilla->set_user($curuser);
 }
