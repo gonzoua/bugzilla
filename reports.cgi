@@ -86,7 +86,7 @@ else {
     my @datasets = $cgi->param('datasets');
     scalar(@datasets) || ThrowUserError('missing_datasets');
 
-    if (grep { $_ !~ /^[A-Za-z0-9:_-]+$/ } @datasets) {
+    if (grep { $_ !~ /^[A-Za-z0-9: _-]+$/ } @datasets) {
         ThrowUserError('invalid_datasets', {'datasets' => \@datasets});
     }
 
