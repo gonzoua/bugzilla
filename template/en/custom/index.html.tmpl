@@ -111,6 +111,17 @@
 
     <div>
       <ul>
+[% IF user.login %]
+        <li>
+          <a href="buglist.cgi?bug_status=New&bug_status=Open&bug_status=In%20Progress&bug_status=UNCONFIRMED&email1=[% user.login | uri %]&emailreporter1=1&emailtype1=equals&query_format=advanced&resolution=---">Open [% terms.bugs %] I reported</a>
+        </li>
+        <li>
+          <a href="buglist.cgi?bug_status=New&bug_status=Open&bug_status=In%20Progress&bug_status=UNCONFIRMED&email1=[% user.login | uri %]&emailcc1=1&emailtype1=equals&query_format=advanced&resolution=---">Open [% terms.bugs %] I am tracking</a>
+        </li>
+        <li>
+          <a href="buglist.cgi?bug_status=New&bug_status=Open&bug_status=In%20Progress&bug_status=UNCONFIRMED&email1=[% user.login | uri %]&emailassigned_to1=1&emailtype1=equals&query_format=advanced&resolution=---">Open [% terms.bugs %] assigned to me</a>
+        </li>
+[% END %]
         <li>
           [% terms.Bugs %] reported in the
           <a href="buglist.cgi?chfield=%5BBug%20creation%5D&amp;chfieldfrom=24h">last 24 hours</a>
