@@ -134,7 +134,7 @@ sub new_ports_bugs {
 
     my %criteria = (
         "bug_status" => "New",
-        "email1" => "freebsd-ports-bugs\@FreeBSD.org",
+        "email1" => "ports-bugs\@FreeBSD.org",
         "emailassigned_to1" => "1",
         "emailtype1" => "exact",
         "product" => "Ports & Packages",
@@ -153,7 +153,7 @@ sub commit_ports_bugs {
     my $critonly = shift();
 
     my %criteria = (
-        "email1" => "freebsd-ports-bugs\@FreeBSD.org",
+        "email1" => "ports-bugs\@FreeBSD.org",
         "emailassigned_to1" => "1",
         "emailtype1" => "exact",
         "f1" => "keywords",
