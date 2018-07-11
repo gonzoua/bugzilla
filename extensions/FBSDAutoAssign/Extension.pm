@@ -71,7 +71,7 @@ sub bug_end_of_create {
 
     # Is it a port patch in summary matching
     #  (/usr/ports/)?([A-Za-z0-9_-]/[A-Za-z0-9_-])?
-    my @res = ($bug->short_desc =~ /(?:^|[:,\[\s+])(?:\/usr\/ports\/)?([\w\-]+\/[\w\-\.]+)(?:[:,\]\s+]|$)/g);
+    my @res = ($bug->short_desc =~ /(?:^|[:,\[\s+])(?:\/usr\/ports\/)?([\w\-]+\/[\w\-\.]+)(?:@[\w\-\.]+)?(?:[:,\]\s+]|$)/g);
     if (@res && scalar(@res) > 0) {
         # warn("Found ports in summary: @res");
         push(@foundports, @res);
@@ -82,7 +82,7 @@ sub bug_end_of_create {
         # Is it a port in the description matching
         #  (/usr/ports/)?([A-Za-z0-9_-]/[A-Za-z0-9_-])?
         my $first = $bug->comments->[0]->body;
-        @res = ($first =~ /(?:^|[:,\s+])(?:\/usr\/ports\/)?([\w\-]+\/[\w\-\.]+)(?:[:,\s+]|$)/g);
+        @res = ($first =~ /(?:^|[:,\s+])(?:\/usr\/ports\/)?([\w\-]+\/[\w\-\.]+)(?:@[\w\-\.]+)?(?:[:,\s+]|$)/g);
         if (@res && scalar(@res) > 0) {
             # warn("Found ports in description: @res");
             push(@foundports, @res);
